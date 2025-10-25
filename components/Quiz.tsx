@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { QuizQuestion } from '../types';
 import { BrainCircuitIcon } from './Icons';
@@ -11,7 +12,8 @@ export interface WrongAnswer {
 
 interface QuizProps {
     questions: QuizQuestion[];
-    onComplete: (score: number, wrongAnswers: WrongAnswer[]) => void;
+    // FIX: Update onComplete signature to include question results
+    onComplete: (score: number, wrongAnswers: WrongAnswer[], questionResults: { itemId: string, correct: boolean }[]) => void;
     title: string;
 }
 
@@ -49,8 +51,17 @@ const Quiz: React.FC<QuizProps> = ({ questions, onComplete, title }) => {
 
     const handleSubmit = (finalAnswers: (number | null)[]) => {
         const wrongAnswers: WrongAnswer[] = [];
+        // FIX: Construct questionResults to pass to onComplete and recordQuizResult
+        const questionResults: { itemId: string, correct: boolean }[] = [];
         const finalScore = finalAnswers.reduce((total, answer, index) => {
-            if (answer === questions[index].answerIndex) {
+            const question = questions[index];
+            const isCorrect = answer === question.answerIndex;
+            
+            if (question.relatedItemId) {
+                questionResults.push({ itemId: question.relatedItemId, correct: isCorrect });
+            }
+
+            if (isCorrect) {
                 return total + 1;
             } else {
                 wrongAnswers.push({
@@ -64,8 +75,9 @@ const Quiz: React.FC<QuizProps> = ({ questions, onComplete, title }) => {
         
         setScore(finalScore);
         setShowResult(true);
-        onComplete(finalScore, wrongAnswers);
-        recordQuizResult(finalScore, questions.length);
+        onComplete(finalScore, wrongAnswers, questionResults);
+        // FIX: Pass questionResults to recordQuizResult
+        recordQuizResult(finalScore, questions.length, questionResults);
     };
     
     if (showResult) {

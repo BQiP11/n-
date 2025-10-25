@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Page } from '../types';
-import { DashboardIcon, ChatBubbleIcon } from './Icons';
+import { DashboardIcon, ChatBubbleIcon, BookOpenIcon, ChartBarIcon } from './Icons';
 
 interface SidebarProps {
   currentPage: Page;
@@ -9,7 +9,9 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
   const navItems = [
-    { id: 'table-of-contents', label: 'Mục lục', icon: <DashboardIcon /> },
+    { id: 'table-of-contents', label: 'Sơ đồ Tri thức', icon: <DashboardIcon /> },
+    { id: 'performance-dashboard', label: 'Phân tích', icon: <ChartBarIcon /> },
+    { id: 'compendium', label: 'Tổng hợp', icon: <BookOpenIcon /> },
     { id: 'ai-tutor', label: 'Trợ giảng AI', icon: <ChatBubbleIcon /> },
   ];
 

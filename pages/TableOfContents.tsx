@@ -1,22 +1,24 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { generateN3Textbook } from '../services/geminiService';
-import type { Chapter } from '../types';
+import type { Chapter, CustomQuiz, LearningItem, ProgressItem } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import XPDisplay from '../components/XPDisplay';
 import { useProgress } from '../hooks/useProgress';
 import SkillTreeNode from '../components/SkillTreeNode';
+import MemoryStream from '../components/MemoryStream';
 
 interface TableOfContentsProps {
     onSelectChapter: (chapter: Chapter) => void;
+    onStartCustomQuiz: (quiz: CustomQuiz) => void;
 }
 
-const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter }) => {
+const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter, onStartCustomQuiz }) => {
     const [textbook, setTextbook] = useState<Chapter[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    const { userProgress, userStats, getChapterProgress, isChapterUnlocked } = useProgress(textbook || []);
+    const { userProgress, userStats, getChapterProgress, isChapterUnlocked, getProgressItem } = useProgress(textbook || []);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -33,8 +35,26 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter }) =>
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        // Only fetch if textbook is not already loaded (e.g. from a cache in a future version)
+        if (!textbook) {
+            fetchData();
+        }
+    }, [fetchData, textbook]);
+    
+    const chapterReviewStatus = useMemo(() => {
+        const status: { [key: number]: boolean } = {};
+        if (!textbook) return status;
+        const now = new Date();
+        
+        textbook.forEach(chapter => {
+            const chapterItems = [...chapter.vocabulary, ...chapter.grammar, ...chapter.kanji];
+            status[chapter.chapter] = chapterItems.some(item => {
+                const progress = getProgressItem(item.id);
+                return new Date(progress.nextReview) <= now && progress.srsLevel > 0;
+            });
+        });
+        return status;
+    }, [textbook, getProgressItem]);
 
     const nodePositions = useMemo(() => {
         if (!textbook) return {};
@@ -85,6 +105,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter }) =>
                     const progress = getChapterProgress(chapter);
                     const unlocked = isChapterUnlocked(chapter);
                     const pos = nodePositions[chapter.chapter];
+                    const hasReviewItems = chapterReviewStatus[chapter.chapter] || false;
 
                     if (!pos) return null;
                     
@@ -94,6 +115,7 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter }) =>
                                 chapter={chapter}
                                 progressPercentage={progress.percentage * 100}
                                 isUnlocked={unlocked}
+                                hasReviewItems={hasReviewItems}
                                 onClick={unlocked ? () => onSelectChapter(chapter) : undefined}
                             />
                         </div>
@@ -126,9 +148,13 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ onSelectChapter }) =>
             {error && !isLoading && <ErrorMessage message={error} onRetry={fetchData} />}
             
             {!isLoading && !error && textbook && (
-                <div className="p-4 glass-card rounded-xl overflow-x-auto">
-                    {renderKnowledgeMap()}
-                </div>
+                <>
+                    <MemoryStream onStartCustomQuiz={onStartCustomQuiz}/>
+
+                    <div className="mt-8 p-4 glass-card rounded-xl overflow-x-auto">
+                        {renderKnowledgeMap()}
+                    </div>
+                </>
             )}
         </div>
     );

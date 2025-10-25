@@ -1,6 +1,5 @@
 import React from 'react';
 import type { Chapter } from '../types';
-// FIX: Removed LockClosedIcon from import as it is not exported from Icons.tsx
 import { CheckCircleIcon, BrainCircuitIcon } from './Icons'; 
 
 // A placeholder for LockClosedIcon if it's not in Icons.tsx
@@ -15,10 +14,11 @@ interface SkillTreeNodeProps {
     chapter: Chapter;
     progressPercentage: number;
     isUnlocked: boolean;
+    hasReviewItems: boolean;
     onClick?: () => void;
 }
 
-const SkillTreeNode: React.FC<SkillTreeNodeProps> = ({ chapter, progressPercentage, isUnlocked, onClick }) => {
+const SkillTreeNode: React.FC<SkillTreeNodeProps> = ({ chapter, progressPercentage, isUnlocked, hasReviewItems, onClick }) => {
     const isMastered = progressPercentage === 100;
     
     let stateStyles = 'bg-bg-synapse-medium border-border-color text-text-secondary cursor-not-allowed';
@@ -35,38 +35,43 @@ const SkillTreeNode: React.FC<SkillTreeNodeProps> = ({ chapter, progressPercenta
     }
 
     return (
-        <button
-            onClick={onClick}
-            disabled={!isUnlocked}
-            className={`w-36 h-36 rounded-full flex flex-col items-center justify-center p-3 text-center border-2 transition-all duration-300 transform hover:scale-105 ${stateStyles}`}
-            style={{boxShadow: isUnlocked ? 'var(--accent-glow)' : 'none'}}
-        >
-            <div className="relative w-full h-full flex flex-col items-center justify-center">
-                {/* Progress Circle */}
-                <svg className="absolute w-full h-full" viewBox="0 0 100 100" style={{transform: 'rotate(-90deg)'}}>
-                    <circle cx="50" cy="50" r="45" stroke="var(--border-color)" strokeWidth="4" fill="transparent" />
-                    {isUnlocked && (
-                        <circle
-                            cx="50"
-                            cy="50"
-                            r="45"
-                            stroke={isMastered ? 'var(--green-500)' : 'var(--accent-magenta)'}
-                            strokeWidth="4"
-                            fill="transparent"
-                            strokeDasharray={2 * Math.PI * 45}
-                            strokeDashoffset={(2 * Math.PI * 45) * (1 - progressPercentage / 100)}
-                            className="transition-all duration-500"
-                        />
-                    )}
-                </svg>
+        <div className="relative">
+            <button
+                onClick={onClick}
+                disabled={!isUnlocked}
+                className={`w-36 h-36 rounded-full flex flex-col items-center justify-center p-3 text-center border-2 transition-all duration-300 transform hover:scale-105 ${stateStyles}`}
+                style={{boxShadow: isUnlocked ? 'var(--accent-glow)' : 'none'}}
+            >
+                <div className="relative w-full h-full flex flex-col items-center justify-center">
+                    {/* Progress Circle */}
+                    <svg className="absolute w-full h-full" viewBox="0 0 100 100" style={{transform: 'rotate(-90deg)'}}>
+                        <circle cx="50" cy="50" r="45" stroke="var(--border-color)" strokeWidth="4" fill="transparent" />
+                        {isUnlocked && (
+                            <circle
+                                cx="50"
+                                cy="50"
+                                r="45"
+                                stroke={isMastered ? '#22c55e' : 'var(--accent-magenta)'}
+                                strokeWidth="4"
+                                fill="transparent"
+                                strokeDasharray={2 * Math.PI * 45}
+                                strokeDashoffset={(2 * Math.PI * 45) * (1 - progressPercentage / 100)}
+                                className="transition-all duration-500"
+                            />
+                        )}
+                    </svg>
 
-                <div className="z-10 flex flex-col items-center">
-                    {icon}
-                    <p className="text-xs font-semibold mt-1">CHƯƠNG {chapter.chapter}</p>
-                    <p className="text-[10px] leading-tight mt-1">{chapter.title}</p>
+                    <div className="z-10 flex flex-col items-center">
+                        {icon}
+                        <p className="text-xs font-semibold mt-1">CHƯƠNG {chapter.chapter}</p>
+                        <p className="text-[10px] leading-tight mt-1">{chapter.title}</p>
+                    </div>
                 </div>
-            </div>
-        </button>
+            </button>
+            {isUnlocked && hasReviewItems && !isMastered && (
+                <div className="absolute inset-[-6px] rounded-full border-2 border-yellow-400 animate-pulse-glow pointer-events-none"></div>
+            )}
+        </div>
     );
 };
 

@@ -1,13 +1,18 @@
+
 import React, { useState, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import TableOfContents from './pages/TableOfContents';
 import AITutor from './pages/AITutor';
 import Lesson from './pages/Lesson';
+import Compendium from './pages/Compendium';
+import PerformanceDashboard from './pages/PerformanceDashboard';
 import AIHelper from './components/AIHelper';
-import { Page, Chapter } from './types';
+import Quiz, { WrongAnswer } from './components/Quiz';
+import { Page, Chapter, CustomQuiz } from './types';
 import { MenuIcon, XIcon } from './components/Icons';
 import { NotificationProvider } from './contexts/NotificationContext';
 import AchievementToast from './components/AchievementToast';
+import InitialAssessmentModal from './components/InitialAssessmentModal';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('table-of-contents');
@@ -15,6 +20,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAiHelperOpen, setIsAiHelperOpen] = useState(false);
   const [contextualPrompt, setContextualPrompt] = useState<string>('');
+  const [customQuiz, setCustomQuiz] = useState<CustomQuiz | null>(null);
 
   const handleSetCurrentPage = useCallback((page: Page) => {
     setCurrentPage(page);
@@ -42,18 +48,46 @@ const App: React.FC = () => {
     setContextualPrompt(''); // Clear prompt on close
   }
 
+  const handleStartCustomQuiz = (quiz: CustomQuiz) => {
+    setCustomQuiz(quiz);
+  }
+
+  const handleCompleteCustomQuiz = (questionResults?: { itemId: string, correct: boolean }[]) => {
+    setCustomQuiz(null);
+  }
+
   const renderContent = () => {
+    if (customQuiz) {
+        return (
+            <div className="max-w-3xl mx-auto">
+                <Quiz
+                    questions={customQuiz.questions}
+                    title={customQuiz.title}
+                    // FIX: Update onComplete handler to match the new signature which includes questionResults.
+                    onComplete={(score: number, wrongAnswers: WrongAnswer[], questionResults: { itemId: string, correct: boolean }[]) => {
+                        handleCompleteCustomQuiz(questionResults);
+                    }}
+                />
+            </div>
+        )
+    }
+
     if (activeChapter) {
-      return <Lesson chapter={activeChapter} onExit={handleExitLesson} openAiHelper={handleOpenAiHelper} />;
+      return <Lesson chapter={activeChapter} onExit={handleExitLesson} openAiHelper={handleOpenAiHelper} onStartCustomQuiz={handleStartCustomQuiz} />;
     }
     
     switch (currentPage) {
       case 'table-of-contents':
-        return <TableOfContents onSelectChapter={handleSelectChapter} />;
+        return <TableOfContents onSelectChapter={handleSelectChapter} onStartCustomQuiz={handleStartCustomQuiz} />;
       case 'ai-tutor':
         return <AITutor />;
+      case 'compendium':
+        // FIX: Add onStartCustomQuiz prop to satisfy the component's expected props, resolving the type error.
+        return <Compendium openAiHelper={handleOpenAiHelper} onStartCustomQuiz={handleStartCustomQuiz} />;
+      case 'performance-dashboard':
+        return <PerformanceDashboard />;
       default:
-        return <TableOfContents onSelectChapter={handleSelectChapter} />;
+        return <TableOfContents onSelectChapter={handleSelectChapter} onStartCustomQuiz={handleStartCustomQuiz} />;
     }
   };
 
@@ -85,6 +119,7 @@ const App: React.FC = () => {
           </main>
         </div>
         <AchievementToast />
+        <InitialAssessmentModal />
     </NotificationProvider>
   );
 };

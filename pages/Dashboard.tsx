@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // FIX: Renamed function to match exported member from geminiService
 import { generateN3Textbook } from '../services/geminiService';
-// FIX: Added Chapter to imports to handle data transformation
-import type { VocabularyWord, GrammarPoint, KanjiCharacter, LearningItem, LearningStatus, Chapter } from '../types';
+// FIX: Added Chapter and LearningStatus to imports to handle data transformation and typing
+import type { VocabularyWord, GrammarPoint, KanjiCharacter, LearningItem, LearningStatus, Chapter, ProgressItem } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
 import Modal from '../components/Modal';
@@ -105,29 +106,31 @@ const DetailContent: React.FC<{ item: LearningItem; status: LearningStatus; onUp
 }
 
 const Dashboard: React.FC = () => {
-    const [curriculum, setCurriculum] = useState<{
-        vocabulary: VocabularyWord[];
-        grammar: GrammarPoint[];
-        kanji: KanjiCharacter[];
-    } | null>(null);
+    // FIX: Refactor state to hold chapters array to properly initialize useProgress
+    const [chapters, setChapters] = useState<Chapter[] | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<LearningItem | null>(null);
-    // FIX: Pass an empty array to useProgress to satisfy its type signature, resolving the error.
-    const { userProgress, getItemStatus, updateItemStatus, getReviewItems } = useProgress([]);
+    // FIX: Pass chapters to useProgress hook to provide context
+    const { userProgress, getItemStatus, updateItemStatus, getReviewItems } = useProgress(chapters || []);
+
+    // FIX: Memoize curriculum derivation from chapters
+    const curriculum = useMemo(() => {
+        if (!chapters) return null;
+        return {
+            vocabulary: chapters.flatMap(c => c.vocabulary),
+            grammar: chapters.flatMap(c => c.grammar),
+            kanji: chapters.flatMap(c => c.kanji),
+        };
+    }, [chapters]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // FIX: The service returns chapters, so we need to process the data
-            // into the flat structure the dashboard expects.
-            const chapters: Chapter[] = await generateN3Textbook();
-            const vocabulary = chapters.flatMap(c => c.vocabulary);
-            const grammar = chapters.flatMap(c => c.grammar);
-            const kanji: KanjiCharacter[] = []; // API doesn't provide Kanji yet, use empty array
-
-            setCurriculum({ vocabulary, grammar, kanji });
+            // FIX: The service returns chapters, which are stored in state
+            const chapterData: Chapter[] = await generateN3Textbook();
+            setChapters(chapterData);
         } catch (e) {
             setError('Không thể tải ma trận kiến thức. Vui lòng thử lại.');
             console.error(e);
@@ -164,7 +167,8 @@ const Dashboard: React.FC = () => {
         });
     };
     
-    const reviewItems = curriculum ? getReviewItems([...curriculum.vocabulary, ...curriculum.grammar, ...curriculum.kanji]) : [];
+    // FIX: Call getReviewItems without arguments as it gets data from the hook's context
+    const reviewItems = getReviewItems();
 
     return (
         <div className="animate-fade-in">

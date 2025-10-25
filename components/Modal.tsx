@@ -18,8 +18,9 @@ export const renderWithFurigana = (textWithFurigana: string) => {
           if (match) {
             const [, kanji, furigana] = match;
             return (
+              // FIX: Replaced the <rb> tag with direct rendering of the base text within the <ruby> element to fix JSX typing errors.
               <ruby key={index} className="font-jp">
-                <rb>{kanji}</rb>
+                {kanji}
                 <rt>{furigana}</rt>
               </ruby>
             );
